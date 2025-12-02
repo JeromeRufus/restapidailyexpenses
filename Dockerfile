@@ -1,14 +1,26 @@
-# Step 1: Use a lightweight JDK
-FROM openjdk:17-jdk-slim
+# ============================
+# 1. Build Stage (Maven build)
+# ============================
+FROM maven:3.9.6-eclipse-temurin-17 AS builder
 
-# Step 2: Set working directory inside container
 WORKDIR /app
 
-# Step 3: Copy your JAR file into the container
-COPY target/*.jar app.jar
+COPY pom.xml .
+RUN mvn dependency:go-offline -B
 
-# Step 4: Expose the backend port
+COPY . .
+RUN mvn clean package -DskipTests
+
+
+# ============================
+# 2. Runtime Stage (Java 17)
+# ============================
+FROM eclipse-temurin:17-jdk-alpine
+
+WORKDIR /app
+
+COPY --from=builder /app/target/*.jar app.jar
+
 EXPOSE 8080
 
-# Step 5: Run the application
 ENTRYPOINT ["java", "-jar", "app.jar"]
